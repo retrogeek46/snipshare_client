@@ -1,112 +1,79 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- * @flow strict-local
- */
+import React, {Component} from 'react';
+import {Button, Image, StyleSheet, View} from 'react-native';
+import {captureScreen} from 'react-native-view-shot';
 
-import React from 'react';
-import type {Node} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+export default class App extends Component {
+  constructor() {
+    super();
+    this.state = {
+      imageURL:
+        'https://raw.githubusercontent.com/retrogeek46/snipshare/master/app/Resources/icon.ico',
+    };
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+    window.navigator.userAgent = 'react-native';
+    const io = require('socket.io-client');
+    this.socket = io('http://192.168.1.4:3456', {
+      transports: ['websocket'],
+    });
 
-const Section = ({children, title}): Node => {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-};
+    this.socket.on('connect', () => {
+      console.log('connected!');
+    });
 
-const App: () => Node = () => {
-  const isDarkMode = useColorScheme() === 'dark';
+    this.socket.on('snipShare', msg => {
+      console.log('received message');
+      this.setState({imageURL: msg});
+    });
+  }
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  takeScreenShot = () => {
+    captureScreen({
+      format: 'png',
+      quality: 0.7,
+      result: 'data-uri',
+    }).then(
+      uri => {
+        this.socket.emit('fromClient', uri);
+      },
+      error => console.error('Oops, snapshot failed', error),
+    );
   };
 
-  return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.js</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
+  render() {
+    return (
+      <View>
+        <View>
+          <Image
+            source={{
+              uri: this.state.imageURL,
+            }}
+            // eslint-disable-next-line react-native/no-inline-styles
+            style={{width: 416, height: 833}}
+          />
         </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
-};
+        <View style={styles.floatingMenuButtonStyle}>
+          <Button
+            // style={styles.button}
+            onPress={() => {
+              // eslint-disable-next-line no-alert
+              alert('You tapped the button!');
+              this.takeScreenShot();
+            }}
+            title="Press Me"
+          />
+        </View>
+      </View>
+    );
+  }
+}
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
+  floatingMenuButtonStyle: {
+    alignSelf: 'flex-end',
+    position: 'absolute',
+    bottom: 0,
+    // position: 'absolute',
+    // bottom: 100,
+    // left: 10,
   },
 });
-
-export default App;
